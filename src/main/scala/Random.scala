@@ -36,4 +36,17 @@ object Rng {
     val xs = (h +: tl)
     for { idx <- NextIntInRange(xs.length) } yield xs(idx)
   }
+
+  def nextAsciiString[F[_]](length: Int)(implicit R: Inject[RngOp, F]): Free.FreeC[F, String] = {
+    def lowerAscii: Free.FreeC[F, Char] = for {
+      x <- NextIntInRange(26)
+    } yield (x + 97).toChar
+
+    lowerAscii.flatMap { case x => lowerAscii.map { _ + x } }
+
+    // Always processes at least once, is there a better way to do this?
+    (1 until length).foldLeft(lowerAscii.map(_.toString)) { case (a, _) =>
+      a.flatMap { x => lowerAscii.map { x + _ } }
+    }
+  }
 }
